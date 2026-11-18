@@ -1,0 +1,11 @@
+services:
+  legal-register:
+    build: .
+    container_name: legal_register_app
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount SQLite database and Excel file so data persists
+      - ./legal_register.db:/app/legal_register.db
+      - ./Legal_Register.xlsx:/app/Legal_Register.xlsx

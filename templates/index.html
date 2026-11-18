@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบทะเบียนและประเมินความสอดคล้องของกฎหมาย (Legal Register)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#082f49',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Prompt', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts: Prompt & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Prompt', 'Inter', sans-serif; }
+        .tab-btn.active {
+            color: #0369a1;
+            border-bottom: 3px solid #0284c7;
+            font-weight: 600;
+            background-color: #f0f7ff;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.25s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-800">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-700 to-sky-500 flex items-center justify-center text-white shadow-md">
+                        <i data-lucide="scale" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-900 leading-tight">Legal Register & Compliance</h1>
+                        <p class="text-xs text-slate-500">ระบบทะเบียนและประเมินความสอดคล้องกฎหมาย</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <a href="/api/export-excel" class="inline-flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition shadow-sm">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-1.5 text-emerald-600"></i>
+                        <span>Export Excel</span>
+                    </a>
+                    <button onclick="reseedConfirm()" class="inline-flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition" title="ซิงค์ข้อมูลใหม่จากไฟล์ Excel เดิม">
+                        <i data-lucide="refresh-cw" class="w-4 h-4 mr-1.5 text-slate-500"></i>
+                        <span class="hidden sm:inline">Sync Excel</span>
+                    </button>
+                    <button onclick="openModal('modal-assessment')" class="inline-flex items-center px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition shadow-sm">
+                        <i data-lucide="plus-circle" class="w-4 h-4 mr-1.5"></i>
+                        <span>ประเมินความสอดคล้อง</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation Bar -->
+            <nav class="flex space-x-1 sm:space-x-4 border-t border-slate-100 -mb-px overflow-x-auto text-sm">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-3 py-2.5 inline-flex items-center whitespace-nowrap text-slate-600 hover:text-sky-600 transition">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 mr-2"></i>ภาพรวม (Dashboard)
+                </button>
+                <button onclick="switchTab('laws')" id="tab-laws" class="tab-btn px-3 py-2.5 inline-flex items-center whitespace-nowrap text-slate-600 hover:text-sky-600 transition">
+                    <i data-lucide="book-open" class="w-4 h-4 mr-2"></i>ทะเบียนกฎหมาย (Laws)
+                </button>
+                <button onclick="switchTab('requirements')" id="tab-requirements" class="tab-btn px-3 py-2.5 inline-flex items-center whitespace-nowrap text-slate-600 hover:text-sky-600 transition">
+                    <i data-lucide="check-square" class="w-4 h-4 mr-2"></i>ข้อกำหนด (Requirements)
+                </button>
+                <button onclick="switchTab('assessments')" id="tab-assessments" class="tab-btn px-3 py-2.5 inline-flex items-center whitespace-nowrap text-slate-600 hover:text-sky-600 transition">
+                    <i data-lucide="clipboard-check" class="w-4 h-4 mr-2"></i>ประวัติการประเมิน (Assessments)
+                </button>
+                <button onclick="switchTab('changelog')" id="tab-changelog" class="tab-btn px-3 py-2.5 inline-flex items-center whitespace-nowrap text-slate-600 hover:text-sky-600 transition">
+                    <i data-lucide="history" class="w-4 h-4 mr-2"></i>ประวัติการแก้ไข (Change Log)
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: DASHBOARD -->
+        <!-- ========================================== -->
+        <section id="view-dashboard" class="space-x-0 space-y-6 animate-fade-in">
+            <!-- Alert Banner for Overdue items (if any) -->
+            <div id="overdue-banner" class="hidden bg-rose-50 border-l-4 border-rose-500 p-4 rounded-r-lg shadow-sm">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 text-rose-500">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                    </div>
+                    <div class="ml-3 flex-1 md:flex md:justify-between items-center">
+                        <p class="text-sm font-medium text-rose-800" id="overdue-banner-text">
+                            พบข้อกำหนดที่เลยกำหนดแก้ไข กรุณาติดตามผล
+                        </p>
+                        <p class="mt-2 text-xs md:mt-0 md:ml-6">
+                            <a href="#overdue-section" class="font-semibold text-rose-700 hover:text-rose-900 underline">
+                                ดูรายการเลยกำหนด &rarr;
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Summary Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <!-- 1. กฎหมายที่ใช้อยู่ -->
+                <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 text-xs">
+                        <span>กฎหมายที่ใช้อยู่</span>
+                        <div class="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                            <i data-lucide="book-marked" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-bold text-slate-900" id="metric-active-laws">0</span>
+                        <span class="text-xs text-slate-400 ml-1">ฉบับ</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-500">ทั้งหมด <span id="metric-total-laws">0</span> ฉบับ</div>
+                </div>
+
+                <!-- 2. ข้อกำหนดทั้งหมด -->
+                <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 text-xs">
+                        <span>ข้อกำหนดทั้งหมด</span>
+                        <div class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <i data-lucide="list-checks" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-bold text-slate-900" id="metric-total-req">0</span>
+                        <span class="text-xs text-slate-400 ml-1">ข้อ</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-500">แตกตามมาตรา</div>
+                </div>
+
+                <!-- 3. % ความสอดคล้อง -->
+                <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 text-xs">
+                        <span>% สอดคล้องล่าสุด</span>
+                        <div class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                            <i data-lucide="percent" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-bold text-emerald-600" id="metric-compliance-rate">0%</span>
+                    </div>
+                    <div class="mt-1 text-xs text-emerald-700">สอดคล้อง <span id="metric-compliant-cnt">0</span> ข้อ</div>
+                </div>
+
+                <!-- 4. ไม่สอดคล้อง -->
+                <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 text-xs">
+                        <span>ต้องแก้ไข (ล่าสุด)</span>
+                        <div class="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+                            <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-bold text-amber-600" id="metric-non-compliant">0</span>
+                        <span class="text-xs text-slate-400 ml-1">ข้อ</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-500">รอแก้ไขตามแผน</div>
+                </div>
+
+                <!-- 5. เลยกำหนดแก้ไข -->
+                <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 text-xs">
+                        <span>เลยกำหนดแก้ไข</span>
+                        <div class="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+                            <i data-lucide="clock-alert" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-bold text-rose-600" id="metric-overdue">0</span>
+                        <span class="text-xs text-slate-400 ml-1">ข้อ</span>
+                    </div>
+                    <div class="mt-1 text-xs text-rose-600 font-medium" id="metric-overdue-status">เร่งด่วน</div>
+                </div>
+
+                <!-- 6. ประเมินล่าสุด -->
+                <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-slate-500 text-xs">
+                        <span>ประเมินล่าสุดเมื่อ</span>
+                        <div class="p-1.5 bg-sky-50 text-sky-600 rounded-lg">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-base font-bold text-slate-800" id="metric-latest-date">-</span>
+                    </div>
+                    <div class="mt-1 text-xs text-slate-500">ตามรอบการตรวจ</div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Status Distribution Chart (Donut) -->
+                <div class="lg:col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col">
+                    <h3 class="text-sm font-semibold text-slate-900 mb-1 flex items-center">
+                        <i data-lucide="pie-chart" class="w-4 h-4 mr-2 text-sky-600"></i>
+                        สถานะปัจจุบัน (ผลประเมินล่าสุด)
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">จำแนกตามผลการประเมินรอบล่าสุดของแต่ละข้อกำหนด</p>
+                    <div class="relative flex-1 flex items-center justify-center min-h-[220px]">
+                        <canvas id="chart-status"></canvas>
+                    </div>
+                </div>
+
+                <!-- Yearly Trends Chart (Bar) -->
+                <div class="lg:col-span-8 bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-sm font-semibold text-slate-900 flex items-center">
+                            <i data-lucide="trending-up" class="w-4 h-4 mr-2 text-sky-600"></i>
+                            แนวโน้มการปฏิบัติตามกฎหมายรายปี (Yearly Trend)
+                        </h3>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">ย้อนหลัง</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-4">จำนวนการประเมิน สอดคล้อง vs ไม่สอดคล้อง และกฎหมายใหม่</p>
+                    <div class="relative flex-1 min-h-[220px]">
+                        <canvas id="chart-yearly"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Department Breakdown & Overdue Action Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6" id="overdue-section">
+                <!-- Department Performance -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                    <h3 class="text-sm font-semibold text-slate-900 mb-1 flex items-center">
+                        <i data-lucide="building" class="w-4 h-4 mr-2 text-sky-600"></i>
+                        ความสอดคล้องแยกตามฝ่าย (Department Compliance)
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">สัดส่วนข้อกำหนดที่ฝ่ายเป็นผู้รับผิดชอบ</p>
+                    <div id="dept-list-container" class="space-y-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Overdue Action Items Table -->
+                <div class="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="text-sm font-semibold text-rose-700 flex items-center">
+                            <i data-lucide="alert-octagon" class="w-4 h-4 mr-2 text-rose-600"></i>
+                            รายการที่ต้องแก้ไขด่วน / เลยกำหนด (Action Required)
+                        </h3>
+                        <span id="overdue-badge-count" class="text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold">0 รายการ</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-3">ข้อกำหนดที่มีผลประเมินไม่สอดคล้องและพ้นกำหนดวันแก้ไขแล้ว</p>
+
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-600 uppercase font-medium border-y border-slate-100">
+                                <tr>
+                                    <th class="py-2.5 px-3">รหัส/ฝ่าย</th>
+                                    <th class="py-2.5 px-3">ข้อกำหนด & กฎหมาย</th>
+                                    <th class="py-2.5 px-3">แผนแก้ไข</th>
+                                    <th class="py-2.5 px-3 text-center">เลยกำหนด</th>
+                                    <th class="py-2.5 px-3 text-right">ดำเนินการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overdue-table-body" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="5" class="py-6 text-center text-slate-400">ไม่มีรายการที่เลยกำหนด 🎉</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: LAWS (ทะเบียนกฎหมาย) -->
+        <!-- ========================================== -->
+        <section id="view-laws" class="hidden space-y-4 animate-fade-in">
+            <!-- Filter & Search Toolbar -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <!-- Search Input -->
+                    <div class="relative flex-1 sm:w-64">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="law-search" oninput="loadLaws()" placeholder="ค้นหาชื่อกฎหมาย, หน่วยงาน..." class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <!-- Type Filter -->
+                    <select id="law-filter-type" onchange="loadLaws()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white">
+                        <option value="">ทุกประเภท</option>
+                        <option value="พ.ร.บ.">พ.ร.บ.</option>
+                        <option value="กฎกระทรวง">กฎกระทรวง</option>
+                        <option value="ประกาศ">ประกาศ</option>
+                        <option value="ระเบียบ/ข้อบังคับ">ระเบียบ/ข้อบังคับ</option>
+                        <option value="อื่น ๆ">อื่น ๆ</option>
+                    </select>
+                    <!-- Status Filter -->
+                    <select id="law-filter-status" onchange="loadLaws()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white">
+                        <option value="">ทุกสถานะ</option>
+                        <option value="ใช้อยู่">ใช้อยู่</option>
+                        <option value="แก้ไข">แก้ไข</option>
+                        <option value="ยกเลิก">ยกเลิก</option>
+                    </select>
+                </div>
+                <!-- Add Law Button -->
+                <button onclick="openModalLaw()" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition">
+                    <i data-lucide="plus" class="w-4 h-4 mr-1.5"></i>
+                    เพิ่มกฎหมายใหม่
+                </button>
+            </div>
+
+            <!-- Laws Table Card -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-600 uppercase font-medium border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4 w-20">รหัส</th>
+                                <th class="py-3 px-4">ชื่อกฎหมาย</th>
+                                <th class="py-3 px-3">ประเภท</th>
+                                <th class="py-3 px-3">หน่วยงาน</th>
+                                <th class="py-3 px-3">วันที่มีผล</th>
+                                <th class="py-3 px-3 text-center">สถานะ</th>
+                                <th class="py-3 px-3 text-center">ข้อกำหนด</th>
+                                <th class="py-3 px-4 text-center w-28">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="laws-table-body" class="divide-y divide-slate-100">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: REQUIREMENTS (ข้อกำหนด) -->
+        <!-- ========================================== -->
+        <section id="view-requirements" class="hidden space-y-4 animate-fade-in">
+            <!-- Filter Toolbar -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <!-- Search Input -->
+                    <div class="relative flex-1 sm:w-64">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="req-search" oninput="loadRequirements()" placeholder="ค้นหาข้อกำหนด, มาตรา..." class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <!-- Department Filter -->
+                    <input type="text" id="req-filter-dept" oninput="loadRequirements()" placeholder="กรองฝ่าย (เช่น HR, IT)..." class="text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 w-36">
+                    <!-- Result Filter -->
+                    <select id="req-filter-result" onchange="loadRequirements()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white">
+                        <option value="">ทุกผลประเมิน</option>
+                        <option value="สอดคล้อง">สอดคล้อง</option>
+                        <option value="ไม่สอดคล้อง">ไม่สอดคล้อง</option>
+                        <option value="ไม่เกี่ยวข้อง">ไม่เกี่ยวข้อง</option>
+                        <option value="ยังไม่ประเมิน">ยังไม่ประเมิน</option>
+                    </select>
+                </div>
+                <!-- Add Req Button -->
+                <button onclick="openModalReq()" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition">
+                    <i data-lucide="plus" class="w-4 h-4 mr-1.5"></i>
+                    เพิ่มข้อกำหนดใหม่
+                </button>
+            </div>
+
+            <!-- Requirements Table Card -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-600 uppercase font-medium border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4 w-20">Req_ID</th>
+                                <th class="py-3 px-4">กฎหมายอ้างอิง</th>
+                                <th class="py-3 px-3 w-24">ข้อ/มาตรา</th>
+                                <th class="py-3 px-4">สรุปข้อกำหนด</th>
+                                <th class="py-3 px-3">ฝ่ายรับผิดชอบ</th>
+                                <th class="py-3 px-3 text-center">ผลล่าสุด</th>
+                                <th class="py-3 px-3 text-center">ประเมินล่าสุด</th>
+                                <th class="py-3 px-4 text-center w-32">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="req-table-body" class="divide-y divide-slate-100">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: ASSESSMENTS (ประวัติการประเมิน) -->
+        <!-- ========================================== -->
+        <section id="view-assessments" class="hidden space-y-4 animate-fade-in">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-900">ประวัติการตรวจประเมินความสอดคล้อง (Assessment Audits)</h2>
+                    <p class="text-xs text-slate-500">บันทึกผลการตรวจสอบตามรอบพร้อมแผนการแก้ไขกรณีไม่สอดคล้อง</p>
+                </div>
+                <button onclick="openModal('modal-assessment')" class="inline-flex items-center px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition">
+                    <i data-lucide="plus" class="w-4 h-4 mr-1.5"></i>
+                    บันทึกการประเมินรอบใหม่
+                </button>
+            </div>
+
+            <!-- Assessments Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-600 uppercase font-medium border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4 w-20">Assess_ID</th>
+                                <th class="py-3 px-3">วันที่ประเมิน</th>
+                                <th class="py-3 px-3 w-20">Req_ID</th>
+                                <th class="py-3 px-4">สรุปข้อกำหนด</th>
+                                <th class="py-3 px-3">ผู้ประเมิน</th>
+                                <th class="py-3 px-3 text-center">ผลประเมิน</th>
+                                <th class="py-3 px-4">แผนแก้ไข / กำหนดเสร็จ</th>
+                                <th class="py-3 px-3 text-center">สถานะ</th>
+                                <th class="py-3 px-4 text-center w-24">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assess-table-body" class="divide-y divide-slate-100">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 5: CHANGE LOG (ประวัติการแก้ไข) -->
+        <!-- ========================================== -->
+        <section id="view-changelog" class="hidden space-y-4 animate-fade-in">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-900">บันทึกประวัติการเปลี่ยนแปลง (Change Log / Audit Trail)</h2>
+                    <p class="text-xs text-slate-500">เก็บบันทึกอัตโนมัติทุกครั้งที่มีการเพิ่ม แก้ไข หรือยกเลิกกฎหมาย/ข้อกำหนด</p>
+                </div>
+                <button onclick="openModalLog()" class="inline-flex items-center px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition">
+                    <i data-lucide="edit-3" class="w-4 h-4 mr-1.5"></i>
+                    บันทึกช่วยจำ (Manual Note)
+                </button>
+            </div>
+
+            <!-- Change Log Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-600 uppercase font-medium border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4 w-28">วันที่</th>
+                                <th class="py-3 px-3 w-16 text-center">ปี</th>
+                                <th class="py-3 px-3 text-center w-24">การเปลี่ยนแปลง</th>
+                                <th class="py-3 px-3 w-28">รายการ</th>
+                                <th class="py-3 px-4">รายละเอียด</th>
+                                <th class="py-3 px-3 w-28">ผู้บันทึก</th>
+                            </tr>
+                        </thead>
+                        <tbody id="changelog-table-body" class="divide-y divide-slate-100">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            Legal Register & Compliance Evaluation System • ISO 14001 / ISO 45001 / Environmental & Safety Standard
+        </div>
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- MODALS & DIALOGS -->
+    <!-- ========================================== -->
+
+    <!-- 1. Modal: Record Assessment (ประเมินความสอดคล้อง) -->
+    <div id="modal-assessment" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-sky-100 text-sky-700 rounded-lg">
+                        <i data-lucide="clipboard-check" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">บันทึกการประเมินความสอดคล้อง</h3>
+                        <p class="text-xs text-slate-500">กรอกผลการตรวจสอบตามข้อกำหนดกฎหมาย</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-assessment')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="form-assessment" onsubmit="submitAssessment(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">เลือกข้อกำหนดที่ต้องการประเมิน *</label>
+                    <select id="assess-req-id" required onchange="onReqSelectedForAssess()" class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <!-- Preview Selected Requirement Summary -->
+                <div id="assess-req-preview" class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 hidden">
+                    <p class="font-medium text-slate-800" id="preview-law-title">-</p>
+                    <p class="mt-0.5 text-slate-600" id="preview-req-summary">-</p>
+                    <div class="mt-1 flex items-center space-x-3 text-[11px] text-slate-500">
+                        <span>ข้อ/มาตรา: <strong id="preview-req-section">-</strong></span>
+                        <span>ฝ่ายรับผิดชอบ: <strong id="preview-req-dept">-</strong></span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">วันที่ประเมิน *</label>
+                        <input type="date" id="assess-date" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ผู้ประเมิน *</label>
+                        <input type="text" id="assess-assessor" required placeholder="ชื่อ-นามสกุล หรือตำแหน่ง" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">ผลการประเมิน *</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="flex items-center p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 transition">
+                            <input type="radio" name="assess-result" value="สอดคล้อง" checked onchange="toggleActionPlan(false)" class="text-emerald-600 focus:ring-emerald-500">
+                            <span class="ml-2 font-medium text-emerald-800">สอดคล้อง</span>
+                        </label>
+                        <label class="flex items-center p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 transition">
+                            <input type="radio" name="assess-result" value="ไม่สอดคล้อง" onchange="toggleActionPlan(true)" class="text-rose-600 focus:ring-rose-500">
+                            <span class="ml-2 font-medium text-rose-800">ไม่สอดคล้อง</span>
+                        </label>
+                        <label class="flex items-center p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 has-[:checked]:border-slate-400 has-[:checked]:bg-slate-100 transition">
+                            <input type="radio" name="assess-result" value="ไม่เกี่ยวข้อง" onchange="toggleActionPlan(false)" class="text-slate-600 focus:ring-slate-400">
+                            <span class="ml-2 font-medium text-slate-700">ไม่เกี่ยวข้อง</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">หลักฐานอ้างอิง / ลิงก์เอกสาร</label>
+                    <input type="text" id="assess-evidence" placeholder="เช่น รายงานผลตรวจสุขภาพ, ทะเบียนอบรม, ลิงก์ Google Drive" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                </div>
+
+                <!-- Action Plan container (highlighted when non-compliant) -->
+                <div id="action-plan-container" class="space-y-3 p-3 bg-amber-50/70 border border-amber-200 rounded-lg hidden">
+                    <p class="font-semibold text-amber-900 flex items-center">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 mr-1 text-amber-600"></i>
+                        แผนการปรับปรุงแก้ไข (เนื่องจากผลไม่สอดคล้อง)
+                    </p>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">แผนแก้ไข (Action Plan) *</label>
+                        <textarea id="assess-action-plan" rows="2" placeholder="ระบุสิ่งที่ต้องดำเนินการแก้ไข..." class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">กำหนดแล้วเสร็จ (Due Date) *</label>
+                        <input type="date" id="assess-due-date" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-assessment')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">ยกเลิก</button>
+                    <button type="submit" class="px-5 py-2 font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition">บันทึกผลการประเมิน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Modal: Add / Edit Law -->
+    <div id="modal-law" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-blue-100 text-blue-700 rounded-lg">
+                        <i data-lucide="book-marked" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900" id="modal-law-title">เพิ่มกฎหมายใหม่</h3>
+                        <p class="text-xs text-slate-500">ลงทะเบียนกฎหมายใน Legal Register</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-law')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="form-law" onsubmit="submitLaw(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="law-id-edit">
+                
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">ชื่อกฎหมาย (เต็ม) *</label>
+                    <textarea id="law-title" required rows="2" placeholder="เช่น พ.ร.บ.ความปลอดภัย อาชีวอนามัย และสภาพแวดล้อมในการทำงาน พ.ศ. 2554" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ประเภทกฎหมาย *</label>
+                        <select id="law-type" required class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                            <option value="พ.ร.บ.">พ.ร.บ.</option>
+                            <option value="กฎกระทรวง">กฎกระทรวง</option>
+                            <option value="ประกาศ">ประกาศ</option>
+                            <option value="ระเบียบ/ข้อบังคับ">ระเบียบ/ข้อบังคับ</option>
+                            <option value="อื่น ๆ">อื่น ๆ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">หน่วยงานผู้ออกกฎหมาย *</label>
+                        <input type="text" id="law-ministry" required placeholder="เช่น กระทรวงแรงงาน, กระทรวงอุตสาหกรรม" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">วันที่มีผลบังคับใช้</label>
+                        <input type="text" id="law-effective-date" placeholder="เช่น 16 ก.ค. 2554 หรือ YYYY-MM-DD" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">สถานะกฎหมาย *</label>
+                        <select id="law-status" required class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                            <option value="ใช้อยู่">ใช้อยู่</option>
+                            <option value="แก้ไข">แก้ไข</option>
+                            <option value="ยกเลิก">ยกเลิก</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ปีที่เพิ่มเข้าระบบ</label>
+                        <input type="number" id="law-year-added" placeholder="เช่น 2026" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ผู้บันทึก</label>
+                        <input type="text" id="law-author" value="Admin" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">ลิงก์ต้นฉบับ / ราชกิจจานุเบกษา</label>
+                    <input type="url" id="law-source-link" placeholder="https://www.ratchakitcha.soc.go.th/..." class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-law')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">ยกเลิก</button>
+                    <button type="submit" class="px-5 py-2 font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition">บันทึกกฎหมาย</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. Modal: Add / Edit Requirement -->
+    <div id="modal-req" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-indigo-100 text-indigo-700 rounded-lg">
+                        <i data-lucide="check-square" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900" id="modal-req-title">เพิ่มข้อกำหนด</h3>
+                        <p class="text-xs text-slate-500">แตกข้อกำหนด/มาตราภายใต้กฎหมาย</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-req')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="form-req" onsubmit="submitReq(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="req-id-edit">
+                
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">กฎหมายที่เกี่ยวข้อง *</label>
+                    <select id="req-law-id" required class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ข้อ / มาตรา</label>
+                        <input type="text" id="req-section" placeholder="เช่น มาตรา 12 หรือ ข้อ 5" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ฝ่ายรับผิดชอบ *</label>
+                        <input type="text" id="req-department" required placeholder="เช่น HR, จป., ผลิต, IT" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">สรุปข้อกำหนด (หน้าที่ที่องค์กรต้องปฏิบัติ) *</label>
+                    <textarea id="req-summary" required rows="3" placeholder="สรุปใจความสำคัญของข้อกำหนดที่ต้องทำ..." class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-req')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">ยกเลิก</button>
+                    <button type="submit" class="px-5 py-2 font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition">บันทึกข้อกำหนด</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. Modal: Manual Note (Change Log) -->
+    <div id="modal-log" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <h3 class="text-base font-bold text-slate-900">บันทึกช่วยจำ (Change Log)</h3>
+                <button onclick="closeModal('modal-log')" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="submitManualLog(event)" class="space-y-4 text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ประเภทการเปลี่ยนแปลง *</label>
+                        <select id="log-action" required class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-sky-500">
+                            <option value="เพิ่ม">เพิ่ม</option>
+                            <option value="แก้ไข">แก้ไข</option>
+                            <option value="ยกเลิก">ยกเลิก</option>
+                            <option value="ทบทวน">ทบทวนประจำปี</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">รหัสอ้างอิง</label>
+                        <input type="text" id="log-item-id" placeholder="เช่น L001 หรือ ทั่วไป" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">รายละเอียด *</label>
+                    <textarea id="log-desc" required rows="3" placeholder="ระบุเหตุผลหรือการเปลี่ยนแปลง..." class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500"></textarea>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">ผู้บันทึก *</label>
+                    <input type="text" id="log-author" required value="Admin" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-log')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">ยกเลิก</button>
+                    <button type="submit" class="px-5 py-2 font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div id="toast-box" class="bg-slate-900 text-white text-xs py-2.5 px-4 rounded-xl shadow-xl flex items-center space-x-2">
+            <i id="toast-icon" data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+            <span id="toast-msg">บันทึกข้อมูลสำเร็จ</span>
+        </div>
+    </div>
+
+    <!-- Frontend Application Logic Script -->
+    <script>
+        // Global variables & state
+        let statusChart = null;
+        let yearlyChart = null;
+        let lawsCache = [];
+        let reqsCache = [];
+
+        // Tab Navigation
+        function switchTab(tabId) {
+            document.querySelectorAll('section[id^="view-"]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+            const viewEl = document.getElementById(`view-${tabId}`);
+            const tabBtn = document.getElementById(`tab-${tabId}`);
+            if (viewEl) viewEl.classList.remove('hidden');
+            if (tabBtn) tabBtn.classList.add('active');
+
+            if (tabId === 'dashboard') loadDashboard();
+            else if (tabId === 'laws') loadLaws();
+            else if (tabId === 'requirements') loadRequirements();
+            else if (tabId === 'assessments') loadAssessments();
+            else if (tabId === 'changelog') loadChangeLog();
+
+            lucide.createIcons();
+        }
+
+        // Toast notification helper
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const box = document.getElementById('toast-box');
+            const msg = document.getElementById('toast-msg');
+            const icon = document.getElementById('toast-icon');
+
+            msg.textContent = message;
+            if (isError) {
+                box.className = "bg-rose-900 text-white text-xs py-2.5 px-4 rounded-xl shadow-xl flex items-center space-x-2";
+                icon.className = "w-4 h-4 text-rose-300";
+                icon.setAttribute('data-lucide', 'alert-circle');
+            } else {
+                box.className = "bg-slate-900 text-white text-xs py-2.5 px-4 rounded-xl shadow-xl flex items-center space-x-2";
+                icon.className = "w-4 h-4 text-emerald-400";
+                icon.setAttribute('data-lucide', 'check-circle');
+            }
+            lucide.createIcons();
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Modal helpers
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            if (modalId === 'modal-assessment') {
+                populateReqDropdown();
+                document.getElementById('assess-date').valueAsDate = new Date();
+            }
+            lucide.createIcons();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function toggleActionPlan(isNonCompliant) {
+            const container = document.getElementById('action-plan-container');
+            const planInput = document.getElementById('assess-action-plan');
+            const dueInput = document.getElementById('assess-due-date');
+            if (isNonCompliant) {
+                container.classList.remove('hidden');
+                planInput.setAttribute('required', 'true');
+                dueInput.setAttribute('required', 'true');
+            } else {
+                container.classList.add('hidden');
+                planInput.removeAttribute('required');
+                dueInput.removeAttribute('required');
+            }
+            lucide.createIcons();
+        }
+
+        // ==========================================
+        // 1. DASHBOARD LOGIC
+        // ==========================================
+        async function loadDashboard() {
+            try {
+                const res = await fetch('/api/dashboard');
+                const data = await res.json();
+
+                // Update Metrics
+                document.getElementById('metric-active-laws').textContent = data.metrics.active_laws;
+                document.getElementById('metric-total-laws').textContent = data.metrics.total_laws;
+                document.getElementById('metric-total-req').textContent = data.metrics.total_requirements;
+                document.getElementById('metric-compliance-rate').textContent = `${data.metrics.compliance_rate}%`;
+                document.getElementById('metric-compliant-cnt').textContent = data.metrics.compliant_count;
+                document.getElementById('metric-non-compliant').textContent = data.metrics.non_compliant_count;
+                document.getElementById('metric-overdue').textContent = data.metrics.overdue_count;
+                document.getElementById('metric-latest-date').textContent = data.metrics.latest_assessment_date;
+
+                // Overdue banner
+                const banner = document.getElementById('overdue-banner');
+                if (data.metrics.overdue_count > 0) {
+                    banner.classList.remove('hidden');
+                    document.getElementById('overdue-banner-text').textContent = `⚠️ มีข้อกำหนดจำนวน ${data.metrics.overdue_count} รายการที่เลยกำหนดเวลาปรับปรุงแก้ไข (Overdue) กรุณาตรวจสอบและดำเนินการ`;
+                } else {
+                    banner.classList.add('hidden');
+                }
+
+                // Status Donut Chart
+                renderStatusChart(data.status_distribution);
+
+                // Yearly Trends Bar Chart
+                renderYearlyChart(data.yearly_trends);
+
+                // Department stats
+                renderDepartmentStats(data.department_stats);
+
+                // Overdue items table
+                renderOverdueTable(data.overdue_items);
+
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Error loading dashboard:", err);
+            }
+        }
+
+        function renderStatusChart(dist) {
+            const ctx = document.getElementById('chart-status').getContext('2d');
+            if (statusChart) statusChart.destroy();
+
+            const labels = ['สอดคล้อง', 'ไม่สอดคล้อง', 'ไม่เกี่ยวข้อง', 'ยังไม่ประเมิน'];
+            const counts = [
+                dist['สอดคล้อง'] || 0,
+                dist['ไม่สอดคล้อง'] || 0,
+                dist['ไม่เกี่ยวข้อง'] || 0,
+                dist['ยังไม่ประเมิน'] || 0
+            ];
+
+            statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: ['#10b981', '#f43f5e', '#94a3b8', '#e2e8f0'],
+                        hoverOffset: 4,
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { family: 'Prompt', size: 11 },
+                                boxWidth: 12,
+                                padding: 15
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function renderYearlyChart(yearly) {
+            const ctx = document.getElementById('chart-yearly').getContext('2d');
+            if (yearlyChart) yearlyChart.destroy();
+
+            const labels = yearly.map(y => `ปี ${y.year}`);
+            const compliantData = yearly.map(y => y.compliant);
+            const nonCompliantData = yearly.map(y => y.non_compliant);
+            const newLawsData = yearly.map(y => y.new_laws);
+
+            yearlyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'สอดคล้อง',
+                            data: compliantData,
+                            backgroundColor: '#10b981',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'ไม่สอดคล้อง',
+                            data: nonCompliantData,
+                            backgroundColor: '#f43f5e',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'กฎหมายเพิ่มใหม่',
+                            data: newLawsData,
+                            backgroundColor: '#0284c7',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: false,
+                            grid: { display: false },
+                            ticks: { font: { family: 'Prompt', size: 11 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, font: { family: 'Prompt', size: 11 } }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { family: 'Prompt', size: 11 }, boxWidth: 12 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderDepartmentStats(deptStats) {
+            const container = document.getElementById('dept-list-container');
+            container.innerHTML = '';
+
+            const entries = Object.entries(deptStats);
+            if (entries.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400">ยังไม่มีข้อมูลฝ่าย</p>';
+                return;
+            }
+
+            entries.forEach(([dept, stat]) => {
+                const evaluated = stat.compliant + stat.non_compliant;
+                const rate = evaluated > 0 ? Math.round((stat.compliant / evaluated) * 100) : 0;
+                
+                let barColor = 'bg-emerald-500';
+                if (rate < 50) barColor = 'bg-rose-500';
+                else if (rate < 80) barColor = 'bg-amber-500';
+
+                const html = `
+                <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div class="flex items-center justify-between text-xs mb-1.5">
+                        <span class="font-semibold text-slate-800">${dept}</span>
+                        <span class="font-bold text-slate-700">${rate}% <span class="text-[11px] font-normal text-slate-500">(${stat.compliant}/${stat.total} ข้อ)</span></span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width: ${rate}%"></div>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                        <span class="text-emerald-700">✓ สอดคล้อง: ${stat.compliant}</span>
+                        <span class="text-rose-700">✕ ไม่สอดคล้อง: ${stat.non_compliant}</span>
+                        <span class="text-slate-500">ยังไม่ประเมิน: ${stat.unassessed}</span>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function renderOverdueTable(items) {
+            const tbody = document.getElementById('overdue-table-body');
+            const badgeCount = document.getElementById('overdue-badge-count');
+            badgeCount.textContent = `${items.length} รายการ`;
+
+            if (items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">ไม่มีรายการที่เลยกำหนดแก้ไข ทุกอย่างเป็นไปตามแผน 🎉</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = items.map(item => `
+                <tr class="hover:bg-rose-50/40 transition">
+                    <td class="py-2.5 px-3 whitespace-nowrap">
+                        <span class="font-bold text-slate-800">${item.req_id}</span>
+                        <div class="text-[10px] text-slate-500">${item.department}</div>
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <div class="font-medium text-slate-900">${item.summary}</div>
+                        <div class="text-[10px] text-slate-500 truncate max-w-xs">${item.law_title}</div>
+                    </td>
+                    <td class="py-2.5 px-3 text-slate-700">
+                        <div class="text-amber-800 font-medium">${item.action_plan || '-'}</div>
+                        <div class="text-[10px] text-slate-500">กำหนด: ${item.due_date}</div>
+                    </td>
+                    <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                            เลย ${item.days_overdue} วัน
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                        <button onclick="quickAssess('${item.req_id}')" class="inline-flex items-center px-2.5 py-1 text-[11px] font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-md shadow-xs transition">
+                            <i data-lucide="check" class="w-3 h-3 mr-1"></i>อัปเดตผล
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function quickAssess(reqId) {
+            openModal('modal-assessment');
+            const sel = document.getElementById('assess-req-id');
+            sel.value = reqId;
+            onReqSelectedForAssess();
+        }
+
+        // ==========================================
+        // 2. LAWS TAB LOGIC
+        // ==========================================
+        async function loadLaws() {
+            const search = document.getElementById('law-search').value;
+            const type = document.getElementById('law-filter-type').value;
+            const status = document.getElementById('law-filter-status').value;
+
+            let url = `/api/laws?`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            if (type) url += `law_type=${encodeURIComponent(type)}&`;
+            if (status) url += `status=${encodeURIComponent(status)}&`;
+
+            try {
+                const res = await fetch(url);
+                lawsCache = await res.json();
+                const tbody = document.getElementById('laws-table-body');
+
+                if (lawsCache.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">ไม่พบข้อมูลกฎหมาย</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = lawsCache.map(law => {
+                    let statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800">ใช้อยู่</span>';
+                    if (law.status === 'แก้ไข') statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800">แก้ไข</span>';
+                    if (law.status === 'ยกเลิก') statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-200 text-slate-700">ยกเลิก</span>';
+
+                    return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 font-bold text-sky-700 whitespace-nowrap">${law.law_id}</td>
+                        <td class="py-3 px-4">
+                            <div class="font-medium text-slate-900 leading-snug">${law.title}</div>
+                            ${law.source_link ? `<a href="${law.source_link}" target="_blank" class="inline-flex items-center text-[10px] text-sky-600 hover:underline mt-0.5"><i data-lucide="external-link" class="w-3 h-3 mr-1"></i>ดูต้นฉบับ</a>` : ''}
+                        </td>
+                        <td class="py-3 px-3 text-slate-600 whitespace-nowrap">${law.law_type || '-'}</td>
+                        <td class="py-3 px-3 text-slate-600">${law.ministry || '-'}</td>
+                        <td class="py-3 px-3 text-slate-600 whitespace-nowrap">${law.effective_date || '-'}</td>
+                        <td class="py-3 px-3 text-center whitespace-nowrap">${statusBadge}</td>
+                        <td class="py-3 px-3 text-center">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700">${law.req_count || 0} ข้อ</span>
+                        </td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                            <div class="flex items-center justify-center space-x-1">
+                                <button onclick="editLaw('${law.law_id}')" class="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-md transition" title="แก้ไข">
+                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteLaw('${law.law_id}')" class="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-md transition" title="ลบ">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Error loading laws:", err);
+            }
+        }
+
+        function openModalLaw() {
+            document.getElementById('form-law').reset();
+            document.getElementById('law-id-edit').value = '';
+            document.getElementById('modal-law-title').textContent = "เพิ่มกฎหมายใหม่";
+            document.getElementById('law-year-added').value = new Date().getFullYear();
+            openModal('modal-law');
+        }
+
+        function editLaw(lawId) {
+            const law = lawsCache.find(l => l.law_id === lawId);
+            if (!law) return;
+
+            document.getElementById('law-id-edit').value = law.law_id;
+            document.getElementById('law-title').value = law.title;
+            document.getElementById('law-type').value = law.law_type || 'พ.ร.บ.';
+            document.getElementById('law-ministry').value = law.ministry || '';
+            document.getElementById('law-effective_date').value = law.effective_date || '';
+            document.getElementById('law-status').value = law.status || 'ใช้อยู่';
+            document.getElementById('law-year-added').value = law.year_added || new Date().getFullYear();
+            document.getElementById('law-source-link').value = law.source_link || '';
+            document.getElementById('modal-law-title').textContent = `แก้ไขกฎหมาย (${law.law_id})`;
+
+            openModal('modal-law');
+        }
+
+        async function submitLaw(e) {
+            e.preventDefault();
+            const editId = document.getElementById('law-id-edit').value;
+            const payload = {
+                title: document.getElementById('law-title').value,
+                law_type: document.getElementById('law-type').value,
+                ministry: document.getElementById('law-ministry').value,
+                effective_date: document.getElementById('law-effective-date').value || null,
+                status: document.getElementById('law-status').value,
+                year_added: parseInt(document.getElementById('law-year-added').value) || new Date().getFullYear(),
+                source_link: document.getElementById('law-source-link').value || null,
+                author: document.getElementById('law-author').value || "Admin"
+            };
+
+            try {
+                let res;
+                if (editId) {
+                    res = await fetch(`/api/laws/${editId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await fetch('/api/laws', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "เกิดข้อผิดพลาด");
+                }
+
+                closeModal('modal-law');
+                showToast(editId ? "แก้ไขกฎหมายสำเร็จ" : "เพิ่มกฎหมายสำเร็จ");
+                loadLaws();
+                loadDashboard();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function deleteLaw(lawId) {
+            if (!confirm(`คุณต้องการลบกฎหมาย ${lawId} ใช่หรือไม่?`)) return;
+            try {
+                const res = await fetch(`/api/laws/${lawId}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "ไม่สามารถลบได้");
+                }
+                showToast("ลบกฎหมายเรียบร้อยแล้ว");
+                loadLaws();
+                loadDashboard();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // ==========================================
+        // 3. REQUIREMENTS TAB LOGIC
+        // ==========================================
+        async function loadRequirements() {
+            const search = document.getElementById('req-search').value;
+            const dept = document.getElementById('req-filter-dept').value;
+            const result = document.getElementById('req-filter-result').value;
+
+            let url = `/api/requirements?`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            if (dept) url += `department=${encodeURIComponent(dept)}&`;
+            if (result) url += `result=${encodeURIComponent(result)}&`;
+
+            try {
+                const res = await fetch(url);
+                reqsCache = await res.json();
+                const tbody = document.getElementById('req-table-body');
+
+                if (reqsCache.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">ไม่พบข้อกำหนดกฎหมาย</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = reqsCache.map(req => {
+                    let resBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">ยังไม่ประเมิน</span>';
+                    if (req.latest_result === 'สอดคล้อง') resBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800">✓ สอดคล้อง</span>';
+                    else if (req.latest_result === 'ไม่สอดคล้อง') resBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-800">✕ ไม่สอดคล้อง</span>';
+                    else if (req.latest_result === 'ไม่เกี่ยวข้อง') resBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-200 text-slate-700">- ไม่เกี่ยวข้อง</span>';
+
+                    return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 font-bold text-indigo-700 whitespace-nowrap">${req.req_id}</td>
+                        <td class="py-3 px-4 max-w-xs">
+                            <span class="font-semibold text-slate-900">${req.law_id}</span>
+                            <div class="text-[10px] text-slate-500 truncate">${req.law_title}</div>
+                        </td>
+                        <td class="py-3 px-3 text-slate-600 whitespace-nowrap">${req.section || '-'}</td>
+                        <td class="py-3 px-4 text-slate-800 font-medium">${req.summary}</td>
+                        <td class="py-3 px-3 whitespace-nowrap">
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px] font-medium">${req.department}</span>
+                        </td>
+                        <td class="py-3 px-3 text-center whitespace-nowrap">${resBadge}</td>
+                        <td class="py-3 px-3 text-center text-slate-500 whitespace-nowrap">${req.latest_assessment_date || '-'}</td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                            <div class="flex items-center justify-center space-x-1">
+                                <button onclick="quickAssess('${req.req_id}')" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded-md transition" title="ประเมินข้อนี้">
+                                    <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="editReq('${req.req_id}')" class="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-md transition" title="แก้ไขข้อกำหนด">
+                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteReq('${req.req_id}')" class="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-md transition" title="ลบ">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Error loading requirements:", err);
+            }
+        }
+
+        async function populateLawDropdownForReq() {
+            const sel = document.getElementById('req-law-id');
+            const res = await fetch('/api/laws');
+            const laws = await res.json();
+            sel.innerHTML = laws.map(l => `<option value="${l.law_id}">${l.law_id} : ${l.title}</option>`).join('');
+        }
+
+        async function openModalReq() {
+            await populateLawDropdownForReq();
+            document.getElementById('form-req').reset();
+            document.getElementById('req-id-edit').value = '';
+            document.getElementById('modal-req-title').textContent = "เพิ่มข้อกำหนดใหม่";
+            openModal('modal-req');
+        }
+
+        async function editReq(reqId) {
+            await populateLawDropdownForReq();
+            const req = reqsCache.find(r => r.req_id === reqId);
+            if (!req) return;
+
+            document.getElementById('req-id-edit').value = req.req_id;
+            document.getElementById('req-law-id').value = req.law_id;
+            document.getElementById('req-section').value = req.section || '';
+            document.getElementById('req-department').value = req.department || '';
+            document.getElementById('req-summary').value = req.summary || '';
+            document.getElementById('modal-req-title').textContent = `แก้ไขข้อกำหนด (${req.req_id})`;
+
+            openModal('modal-req');
+        }
+
+        async function submitReq(e) {
+            e.preventDefault();
+            const editId = document.getElementById('req-id-edit').value;
+            const payload = {
+                law_id: document.getElementById('req-law-id').value,
+                section: document.getElementById('req-section').value,
+                summary: document.getElementById('req-summary').value,
+                department: document.getElementById('req-department').value,
+                author: "Admin"
+            };
+
+            try {
+                let res;
+                if (editId) {
+                    res = await fetch(`/api/requirements/${editId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await fetch('/api/requirements', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (!res.ok) throw new Error("เกิดข้อผิดพลาดในการบันทึกข้อกำหนด");
+
+                closeModal('modal-req');
+                showToast(editId ? "แก้ไขข้อกำหนดสำเร็จ" : "เพิ่มข้อกำหนดสำเร็จ");
+                loadRequirements();
+                loadDashboard();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function deleteReq(reqId) {
+            if (!confirm(`ต้องการลบข้อกำหนด ${reqId} และประวัติการประเมินทั้งหมดใช่หรือไม่?`)) return;
+            try {
+                const res = await fetch(`/api/requirements/${reqId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error("ไม่สามารถลบได้");
+                showToast("ลบข้อกำหนดเรียบร้อย");
+                loadRequirements();
+                loadDashboard();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // ==========================================
+        // 4. ASSESSMENTS TAB LOGIC
+        // ==========================================
+        async function loadAssessments() {
+            try {
+                const res = await fetch('/api/assessments');
+                const list = await res.json();
+                const tbody = document.getElementById('assess-table-body');
+
+                if (list.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">ยังไม่มีประวัติการประเมิน</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = list.map(item => {
+                    let resBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800">สอดคล้อง</span>';
+                    if (item.result === 'ไม่สอดคล้อง') resBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-800">ไม่สอดคล้อง</span>';
+                    else if (item.result === 'ไม่เกี่ยวข้อง') resBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-200 text-slate-700">ไม่เกี่ยวข้อง</span>';
+
+                    let overdueBadge = '<span class="text-slate-400 text-[10px]">-</span>';
+                    if (item.is_overdue) {
+                        overdueBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">เลยกำหนด</span>';
+                    } else if (item.result === 'ไม่สอดคล้อง' && item.due_date) {
+                        overdueBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800">รอดำเนินการ</span>';
+                    }
+
+                    return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 font-bold text-sky-700 whitespace-nowrap">${item.assess_id}</td>
+                        <td class="py-3 px-3 text-slate-600 whitespace-nowrap">${item.assessment_date}</td>
+                        <td class="py-3 px-3 font-semibold text-slate-900 whitespace-nowrap">${item.req_id}</td>
+                        <td class="py-3 px-4">
+                            <div class="font-medium text-slate-900 leading-snug">${item.req_summary}</div>
+                            <div class="text-[10px] text-slate-500">${item.law_title}</div>
+                        </td>
+                        <td class="py-3 px-3 text-slate-600 whitespace-nowrap">${item.assessor}</td>
+                        <td class="py-3 px-3 text-center whitespace-nowrap">${resBadge}</td>
+                        <td class="py-3 px-4 text-slate-700">
+                            <div>${item.action_plan && item.action_plan !== '-' ? item.action_plan : '-'}</div>
+                            ${item.due_date ? `<div class="text-[10px] text-slate-500">กำหนดเสร็จ: ${item.due_date}</div>` : ''}
+                        </td>
+                        <td class="py-3 px-3 text-center whitespace-nowrap">${overdueBadge}</td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                            <button onclick="deleteAssessment('${item.assess_id}')" class="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition" title="ลบประวัติรอบนี้">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Error loading assessments:", err);
+            }
+        }
+
+        async function populateReqDropdown() {
+            const sel = document.getElementById('assess-req-id');
+            const res = await fetch('/api/requirements');
+            const reqs = await res.json();
+            sel.innerHTML = '<option value="">-- กรุณาเลือกข้อกำหนด --</option>' + reqs.map(r => `
+                <option value="${r.req_id}" data-law="${r.law_title}" data-summary="${r.summary}" data-section="${r.section || '-'}" data-dept="${r.department}">${r.req_id} : ${r.summary} (${r.law_id})</option>
+            `).join('');
+            onReqSelectedForAssess();
+        }
+
+        function onReqSelectedForAssess() {
+            const sel = document.getElementById('assess-req-id');
+            const preview = document.getElementById('assess-req-preview');
+            const opt = sel.options[sel.selectedIndex];
+
+            if (!opt || !opt.value) {
+                preview.classList.add('hidden');
+                return;
+            }
+
+            preview.classList.remove('hidden');
+            document.getElementById('preview-law-title').textContent = opt.getAttribute('data-law') || '-';
+            document.getElementById('preview-req-summary').textContent = opt.getAttribute('data-summary') || '-';
+            document.getElementById('preview-req-section').textContent = opt.getAttribute('data-section') || '-';
+            document.getElementById('preview-req-dept').textContent = opt.getAttribute('data-dept') || '-';
+        }
+
+        async function submitAssessment(e) {
+            e.preventDefault();
+            const reqId = document.getElementById('assess-req-id').value;
+            if (!reqId) {
+                alert("กรุณาเลือกข้อกำหนด");
+                return;
+            }
+
+            const resultVal = document.querySelector('input[name="assess-result"]:checked').value;
+            const payload = {
+                req_id: reqId,
+                assessment_date: document.getElementById('assess-date').value,
+                assessor: document.getElementById('assess-assessor').value,
+                result: resultVal,
+                evidence: document.getElementById('assess-evidence').value || "-",
+                action_plan: resultVal === "ไม่สอดคล้อง" ? document.getElementById('assess-action-plan').value : "-",
+                due_date: resultVal === "ไม่สอดคล้อง" ? document.getElementById('assess-due-date').value : null
+            };
+
+            try {
+                const res = await fetch('/api/assessments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error("เกิดข้อผิดพลาดในการบันทึกการประเมิน");
+
+                closeModal('modal-assessment');
+                showToast("บันทึกผลการประเมินเรียบร้อยแล้ว");
+                loadAssessments();
+                loadDashboard();
+                loadRequirements();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function deleteAssessment(assessId) {
+            if (!confirm(`ต้องการลบรายการประเมิน ${assessId} ใช่หรือไม่?`)) return;
+            try {
+                const res = await fetch(`/api/assessments/${assessId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error("ไม่สามารถลบได้");
+                showToast("ลบรายการประเมินเรียบร้อยแล้ว");
+                loadAssessments();
+                loadDashboard();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // ==========================================
+        // 5. CHANGE LOG TAB LOGIC
+        // ==========================================
+        async function loadChangeLog() {
+            try {
+                const res = await fetch('/api/changelog');
+                const list = await res.json();
+                const tbody = document.getElementById('changelog-table-body');
+
+                if (list.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">ยังไม่มีประวัติ Change Log</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = list.map(item => {
+                    let actionBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-800">เพิ่ม</span>';
+                    if (item.action_type === 'แก้ไข') actionBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800">แก้ไข</span>';
+                    else if (item.action_type === 'ยกเลิก') actionBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-800">ยกเลิก</span>';
+                    else if (item.action_type === 'ประเมิน') actionBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800">ประเมิน</span>';
+
+                    return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4 font-medium text-slate-600 whitespace-nowrap">${item.log_date || '-'}</td>
+                        <td class="py-3 px-3 text-center text-slate-500 whitespace-nowrap">${item.log_year || '-'}</td>
+                        <td class="py-3 px-3 text-center whitespace-nowrap">${actionBadge}</td>
+                        <td class="py-3 px-3 font-bold text-slate-800 whitespace-nowrap">${item.item_id || '-'}</td>
+                        <td class="py-3 px-4 text-slate-800">${item.description}</td>
+                        <td class="py-3 px-3 text-slate-600 whitespace-nowrap">${item.author || '-'}</td>
+                    </tr>`;
+                }).join('');
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Error loading change log:", err);
+            }
+        }
+
+        function openModalLog() {
+            document.getElementById('log-item-id').value = '';
+            document.getElementById('log-desc').value = '';
+            openModal('modal-log');
+        }
+
+        async function submitManualLog(e) {
+            e.preventDefault();
+            const payload = {
+                action_type: document.getElementById('log-action').value,
+                item_id: document.getElementById('log-item-id').value || "ทั่วไป",
+                description: document.getElementById('log-desc').value,
+                author: document.getElementById('log-author').value
+            };
+            try {
+                const res = await fetch('/api/changelog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error("ไม่สามารถบันทึกได้");
+                closeModal('modal-log');
+                showToast("บันทึกช่วยจำเรียบร้อยแล้ว");
+                loadChangeLog();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function reseedConfirm() {
+            if (!confirm("⚠️ ต้องการโหลดข้อมูลตั้งต้นใหม่จาก Legal_Register.xlsx ใช่หรือไม่?\n(ข้อมูลที่บันทึกเพิ่มเติมในเว็บจะถูกรีเซ็ตกลับเป็นไฟล์ต้นฉบับ)")) return;
+            try {
+                const res = await fetch('/api/reseed', { method: 'POST' });
+                if (!res.ok) throw new Error("เกิดข้อผิดพลาดในการ Sync");
+                showToast("โหลดข้อมูลจาก Excel สำเร็จแล้ว!");
+                loadDashboard();
+                loadLaws();
+                loadRequirements();
+                loadAssessments();
+                loadChangeLog();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // On Page Load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
